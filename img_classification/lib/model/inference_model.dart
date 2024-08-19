@@ -21,3 +21,19 @@ class InferenceModel {
   InferenceModel(this.image, this.interpreterAddress,
       this.labels, this.inputShape, this.outputShape);
 }
+
+// class InferenceOptions {
+//   final bool useXNNPackDelegate;
+//   final bool useGpuDelegateV2;
+//   final bool useGpuDelegate;
+//   final bool useMetalDelegate;
+//   final bool isQuantized;
+//
+//
+//   InferenceOptions({
+//     this.useXNNPackDelegate = false,
+//     this.useGpuDelegateV2 = false,
+//     this.useGpuDelegate = false,
+//     this.useMetalDelegate = false,
+//   });
+// }

@@ -1,11 +1,12 @@
 import 'dart:developer';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:flutter/services.dart';
-import 'package:hello/isolate_inference.dart';
+import 'package:img_classification/worker/inference_worker.dart';
 import 'package:image/image.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
+
+import '../model/inference_model.dart';
 
 class ImageClassificationHelper {
   static const modelPath = 'assets/model.tflite';
@@ -14,7 +15,7 @@ class ImageClassificationHelper {
 
   late final Interpreter interpreter;
   late final List<String> labels;
-  late final IsolateInference isolateInference;
+  late final InferenceWorker inferenceWorker;
   late Tensor inputTensor;
   late Tensor outputTensor;
 
@@ -59,68 +60,15 @@ class ImageClassificationHelper {
   Future<void> initHelper() async {
     _loadLabels();
     _loadModel();
-    isolateInference = IsolateInference();
-    await isolateInference.start();
+    inferenceWorker = await InferenceWorker.spawn();
   }
 
   // inference still image
-  Future<Map<String, double>> inferenceImage(Image image) async {
+  Future<Map<String, double>?> inferenceImage(Image image) async {
     // Init inferenceModel
-    var isolateModel = InferenceModel(image, interpreter.address, labels,
+    var model = InferenceModel(image, interpreter.address, labels,
         inputTensor.shape, outputTensor.shape);
 
-    // Init message received port
-    ReceivePort responsePort = ReceivePort();
-
-    // Sending inference request
-    isolateInference.sendPort
-        .send(isolateModel.responsePort = responsePort.sendPort);
-    // get inference result.
-    var results = await responsePort.first;
-
-    return results;
+    return await inferenceWorker.inferenceImage(model);
   }
-
-  // inference still image
-  // Future<Map<String, double>> inferenceImage(Image image) async {
-  //   // resize original image to match model shape.
-  //   Image imageInput = copyResize(
-  //     image,
-  //     width: inputTensor.shape[1],
-  //     height: inputTensor.shape[2],
-  //   );
-  //
-  //   // RGB value of each pixel in image
-  //   final imageMatrix = List.generate(
-  //     imageInput.height,
-  //         (y) => List.generate(
-  //       imageInput.width,
-  //           (x) {
-  //         final pixel = imageInput.getPixel(x, y);
-  //         return [
-  //           (pixel.r / 127.5) - 1,
-  //           (pixel.g / 127.5) - 1,
-  //           (pixel.b / 127.5) - 1,];
-  //       },
-  //     ),
-  //   );
-  //
-  //   // Set tensors shape
-  //   final input = [imageMatrix];
-  //   final output = List.filled(1*1000, 0).reshape([1,1000]);
-  //   // Run inference;
-  //   interpreter.run(input, output);
-  //   // Get first output tensor
-  //   final result = output.first;
-  //   // Set classification map {label: points}
-  //   var classification = <String, double>{};
-  //   for (var i = 0; i < result.length; i++) {
-  //     if (result[i] != 0) {
-  //       // Set label: points
-  //       classification[labels[i]] =
-  //           result[i].toDouble();
-  //     }
-  //   }
-  //   return classification;
-  // }
 }

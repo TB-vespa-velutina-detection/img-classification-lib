@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:isolate';
 
-import 'package:hello/model/inference_model.dart';
-import 'package:image/image.dart';
+import 'package:img_classification/helper/image_formatter_helper.dart';
+import 'package:img_classification/model/inference_model.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
 
 class InferenceWorker {
   // Isolate properties
@@ -13,9 +14,9 @@ class InferenceWorker {
   int _idCounter = 0;
   bool _closed = false;
 
-  Future<Object?> inferenceImage(InferenceModel model) async {
+  Future<Map<String, double>?> inferenceImage(InferenceModel model) async {
     if (_closed) throw StateError('Closed');
-    final completer = Completer<Object?>.sync();
+    final completer = Completer<Map<String, double>?>.sync();
     final id = _idCounter++;
     _activeRequests[id] = completer;
     _commands.send((id, model));
@@ -92,15 +93,32 @@ class InferenceWorker {
       }
       //TODO: Adapt for model inference
       final (int id, InferenceModel model) = message as (int, InferenceModel);
+      final matrix = ImageFormatterHelper.toResizedMatrix(
+          model.image!, model.inputShape.first, model.outputShape.first);
 
-      sendPort.send((id, "TODO: send prediction"));
+      final input = [matrix];
+      final output = [List<int>.filled(model.outputShape[1], 0)];
 
-      // try {
-      //   final jsonData = "toto";
-      //   sendPort.send((id, jsonData));
-      // } catch (e) {
-      //   sendPort.send((id, RemoteError(e.toString(), '')));
-      // }
+      // Run inference
+      Interpreter interpreter =
+          Interpreter.fromAddress(model.interpreterAddress);
+      interpreter.run(input, output);
+
+      // Get first output tensor (it contains all predictions)
+      final result = output.first;
+      int maxScore = result.reduce((a, b) => a + b); // For % score
+      // Set classification map {label: points}
+      var classification = <String, double>{};
+      // Transform every value to % and assign to corresponding label
+      for (var i = 0; i < result.length; i++) {
+        if (result[i] != 0) {
+          // Set label: points
+          classification[model.labels[i]] =
+              result[i].toDouble() / maxScore.toDouble();
+        }
+      }
+
+      sendPort.send((id, classification));
     });
   }
 
