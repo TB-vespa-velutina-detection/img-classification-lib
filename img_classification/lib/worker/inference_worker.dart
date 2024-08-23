@@ -60,7 +60,6 @@ class InferenceWorker {
       _closed = true;
       _commands.send('shutdown');
       if (_activeRequests.isEmpty) _responses.close();
-      print('--- port closed --- ');
     }
   }
 
@@ -104,6 +103,8 @@ class InferenceWorker {
           Interpreter.fromAddress(model.interpreterAddress);
       interpreter.run(input, output);
 
+
+      //TODO: Isolate this code for better testing
       // Get first output tensor (it contains all predictions)
       final result = output.first;
       int maxScore = result.reduce((a, b) => a + b); // For % score
