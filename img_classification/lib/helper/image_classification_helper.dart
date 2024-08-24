@@ -12,7 +12,6 @@ class ImageClassificationHelper {
   static const modelPath = 'assets/model.tflite';
   static const labelsPath = 'assets/labels.txt';
 
-
   late final Interpreter interpreter;
   late final List<String> labels;
   late final InferenceWorker inferenceWorker;

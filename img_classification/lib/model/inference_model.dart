@@ -1,4 +1,5 @@
 import 'package:image/image.dart' as image_lib;
+import 'package:img_classification/model/option_enum.dart';
 
 /// A model class that holds the necessary data for performing image inference.
 ///

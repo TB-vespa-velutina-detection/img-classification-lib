@@ -93,10 +93,10 @@ class InferenceWorker {
       //TODO: Adapt for model inference
       final (int id, InferenceModel model) = message as (int, InferenceModel);
       final matrix = ImageFormatterHelper.toResizedMatrix(
-          model.image!, model.inputShape.first, model.outputShape.first);
+          model.image!, model.inputShape[1], model.inputShape[2]);
 
       final input = [matrix];
-      final output = [List<int>.filled(model.outputShape[1], 0)];
+      final output = [List<num>.filled(model.outputShape[1], 0)];
 
       // Run inference
       Interpreter interpreter =
@@ -107,7 +107,8 @@ class InferenceWorker {
       //TODO: Isolate this code for better testing
       // Get first output tensor (it contains all predictions)
       final result = output.first;
-      int maxScore = result.reduce((a, b) => a + b); // For % score
+
+      // num maxScore = result.reduce((num acc, num elem) => acc + elem); // For % score
       // Set classification map {label: points}
       var classification = <String, double>{};
       // Transform every value to % and assign to corresponding label
@@ -115,7 +116,7 @@ class InferenceWorker {
         if (result[i] != 0) {
           // Set label: points
           classification[model.labels[i]] =
-              result[i].toDouble() / maxScore.toDouble();
+              result[i].toDouble() /*/ maxScore.toDouble()*/;
         }
       }
 

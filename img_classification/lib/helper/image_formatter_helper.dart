@@ -5,7 +5,7 @@ class ImageFormatterHelper {
   /// Convert an image to a 3D matrix of RGB pixel values.
   static List<List<List<num>>> toResizedMatrix(
       Image image, int newWidth, int newHeight,
-      [NormalizeOption option = NormalizeOption.none]) {
+      [NormalizeOption option = NormalizeOption.minus_one_to_one]) { //TODO: Par défaut => none
     Image imageInput = copyResize(
       image,
       width: newWidth,
