@@ -90,7 +90,6 @@ class InferenceWorker {
         receivePort.close();
         return;
       }
-      //TODO: Adapt for model inference
       final (int id, InferenceModel model) = message as (int, InferenceModel);
       final matrix = ImageFormatterHelper.toResizedMatrix(
           model.image!, model.inputShape[1], model.inputShape[2]);

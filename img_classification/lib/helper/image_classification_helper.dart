@@ -9,9 +9,6 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 import '../model/inference_model.dart';
 
 class ImageClassificationHelper {
-  static const modelPath = 'assets/model.tflite';
-  static const labelsPath = 'assets/labels.txt';
-
   late final Interpreter interpreter;
   late final List<String> labels;
   late final InferenceWorker inferenceWorker;
@@ -19,7 +16,7 @@ class ImageClassificationHelper {
   late Tensor outputTensor;
 
   // Load model
-  Future<void> _loadModel() async {
+  Future<void> _loadModel(String modelAssetPath) async {
     final options = InterpreterOptions();
 
     // Use XNNPACK Delegate
@@ -39,7 +36,7 @@ class ImageClassificationHelper {
     }
 
     // Load model from assets
-    interpreter = await Interpreter.fromAsset(modelPath);
+    interpreter = await Interpreter.fromAsset(modelAssetPath);
     // Get tensor input shape [1, 224, 224, 3]
     inputTensor = interpreter.getInputTensors().first;
     // Get tensor output shape [1, 1000]
@@ -51,14 +48,15 @@ class ImageClassificationHelper {
   }
 
   // Load labels from assets
-  Future<void> _loadLabels() async {
-    final labelTxt = await rootBundle.loadString(labelsPath);
-    labels = labelTxt.split('\n');
+  Future<void> _loadLabels(String labelsAssetPath, String separator) async {
+    final labelTxt = await rootBundle.loadString(labelsAssetPath);
+    labels = labelTxt.split(separator);
   }
 
-  Future<void> initHelper() async {
-    _loadLabels();
-    _loadModel();
+  Future<void> initHelper(String, modelAssetPath, String labelsAssetPath,
+      {String separator = '\n'}) async {
+    _loadLabels(labelsAssetPath, separator);
+    _loadModel(modelAssetPath);
     inferenceWorker = await InferenceWorker.spawn();
   }
 
