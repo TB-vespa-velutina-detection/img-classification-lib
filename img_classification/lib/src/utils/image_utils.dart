@@ -1,11 +1,12 @@
 import 'package:image/image.dart';
-import 'package:img_classification/model/option_enum.dart';
 
-class ImageFormatterHelper {
+import '../../model/option_enum.dart';
+
+class ImageUtils {
   /// Convert an image to a 3D matrix of RGB pixel values.
   static List<List<List<num>>> toResizedMatrix(
       Image image, int newWidth, int newHeight,
-      [NormalizeOption option = NormalizeOption.minus_one_to_one]) { //TODO: Par défaut => none
+      [NormalizeMethod option = NormalizeMethod.none]) { //TODO: Par défaut => none
     Image imageInput = copyResize(
       image,
       width: newWidth,
@@ -28,13 +29,13 @@ class ImageFormatterHelper {
 
   /// Normalize pixel values based on the given option.
   static List<num> _normalizePixel(
-      num r, num g, num b, NormalizeOption option) {
+      num r, num g, num b, NormalizeMethod option) {
     switch (option) {
-      case NormalizeOption.none:
+      case NormalizeMethod.none:
         return [r, g, b];
-      case NormalizeOption.zero_to_one:
+      case NormalizeMethod.zero_to_one:
         return [(r / 255), (g / 255), (b / 255)];
-      case NormalizeOption.minus_one_to_one:
+      case NormalizeMethod.minus_one_to_one:
         return [
           (r / 127.5) - 1,
           (g / 127.5) - 1,

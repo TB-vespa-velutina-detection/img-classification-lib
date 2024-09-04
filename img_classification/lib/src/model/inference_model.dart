@@ -12,13 +12,20 @@ import 'package:img_classification/model/option_enum.dart';
 /// [labels]: The list of labels for classification.
 /// [inputShape]: The shape of the input tensor.
 /// [outputShape]: The shape of the output tensor.
+/// [normalizeMethod]: How pixel value are normalized. Default no normalization
+/// [isBinary]: A flag indicating whether the model is binary or not. Default = false
+/// [binaryThreshold]: The threshold for binary classification. Default = 0
 class InferenceModel {
   image_lib.Image? image;
   int interpreterAddress;
   List<String> labels;
   List<int> inputShape; // i.e. [1, 224, 224, 3]
   List<int> outputShape; //i.e. [1, 1000]
+  NormalizeMethod normalizeMethod;
+  bool isBinary;
+  double binaryThreshold;
 
-  InferenceModel(this.image, this.interpreterAddress,
-      this.labels, this.inputShape, this.outputShape);
+  InferenceModel(this.image, this.interpreterAddress, this.labels,
+      this.inputShape, this.outputShape,
+      {this.normalizeMethod = NormalizeMethod.none, this.isBinary = false, this.binaryThreshold = 0});
 }

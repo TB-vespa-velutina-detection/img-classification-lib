@@ -1,15 +1,22 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart';
-import 'package:img_classification/helper/image_formatter_helper.dart';
 import 'package:img_classification/model/option_enum.dart';
+import 'package:img_classification/src/utils/image_utils.dart';
 
 void main() {
   group('ImageFormatterHelper', () {
-    test('toResizedMatrix returns correct dimensions', () {
+    test('toResizedMatrix returns correct dimensions (source is bigger thant target)', () {
       final image = Image(width: 10, height: 10);
-      final result = ImageFormatterHelper.toResizedMatrix(image, 5, 5);
+      final result = ImageUtils.toResizedMatrix(image, 5, 5);
       expect(result.length, 5);
       expect(result[0].length, 5);
+    });
+
+    test('toResizedMatrix returns correct dimensions (source is smaller than target)', () {
+      final image = Image(width: 5, height: 5);
+      final result = ImageUtils.toResizedMatrix(image, 10, 10);
+      expect(result.length, 10);
+      expect(result[0].length, 10);
     });
 
     test('toResizedMatrix normalizes pixels correctly with NormalizeOption.none', () {
@@ -18,7 +25,7 @@ void main() {
       image.setPixel(1, 0, ColorInt8.rgb(0, 255, 0));
       image.setPixel(0, 1, ColorInt8.rgb(0, 0, 255));
       image.setPixel(1, 1, ColorInt8.rgb(255, 255, 255));
-      final result = ImageFormatterHelper.toResizedMatrix(image, 2, 2, NormalizeOption.none);
+      final result = ImageUtils.toResizedMatrix(image, 2, 2, NormalizeMethod.none);
       expect(result[0][0], [255, 0, 0]);
       expect(result[0][1], [0, 255, 0]);
       expect(result[1][0], [0, 0, 255]);
@@ -31,7 +38,7 @@ void main() {
       image.setPixel(1, 0, ColorInt8.rgb(0, 255, 0));
       image.setPixel(0, 1, ColorInt8.rgb(0, 0, 255));
       image.setPixel(1, 1, ColorInt8.rgb(255, 255, 255));
-      final result = ImageFormatterHelper.toResizedMatrix(image, 2, 2, NormalizeOption.zero_to_one);
+      final result = ImageUtils.toResizedMatrix(image, 2, 2, NormalizeMethod.zero_to_one);
       expect(result[0][0], [1.0, 0.0, 0.0]);
       expect(result[0][1], [0.0, 1.0, 0.0]);
       expect(result[1][0], [0.0, 0.0, 1.0]);
@@ -44,7 +51,7 @@ void main() {
       image.setPixel(1, 0, ColorInt8.rgb(0, 255, 0));
       image.setPixel(0, 1, ColorInt8.rgb(0, 0, 255));
       image.setPixel(1, 1, ColorInt8.rgb(255, 255, 255));
-      final result = ImageFormatterHelper.toResizedMatrix(image, 2, 2, NormalizeOption.minus_one_to_one);
+      final result = ImageUtils.toResizedMatrix(image, 2, 2, NormalizeMethod.minus_one_to_one);
       expect(result[0][0], [1.0, -1.0, -1.0]);
       expect(result[0][1], [-1.0, 1.0, -1.0]);
       expect(result[1][0], [-1.0, -1.0, 1.0]);
@@ -53,7 +60,7 @@ void main() {
 
     test('toResizedMatrix throws error on empty', () {
       final image = Image(width: 0, height: 0);
-      expect(() => ImageFormatterHelper.toResizedMatrix(image, 2, 2), throwsRangeError);
+      expect(() => ImageUtils.toResizedMatrix(image, 2, 2), throwsRangeError);
     });
   });
 }

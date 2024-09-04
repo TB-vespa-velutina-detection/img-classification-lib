@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart';
-import 'package:img_classification/model/inference_model.dart';
-import 'package:img_classification/worker/inference_worker.dart';
+import 'package:img_classification/src/model/inference_model.dart';
+import 'package:img_classification/src/worker/inference_worker.dart';
 
 void main() {
   group('InferenceWorker', () {

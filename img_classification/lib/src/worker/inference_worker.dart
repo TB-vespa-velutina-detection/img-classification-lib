@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:isolate';
 
-import 'package:img_classification/helper/image_formatter_helper.dart';
-import 'package:img_classification/model/inference_model.dart';
+import 'package:img_classification/src/utils/prediction_utils.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
+
+import '../model/inference_model.dart';
+import '../utils/image_utils.dart';
 
 class InferenceWorker {
   // Isolate properties
@@ -91,8 +93,8 @@ class InferenceWorker {
         return;
       }
       final (int id, InferenceModel model) = message as (int, InferenceModel);
-      final matrix = ImageFormatterHelper.toResizedMatrix(
-          model.image!, model.inputShape[1], model.inputShape[2]);
+      final matrix = ImageUtils.toResizedMatrix(model.image!,
+          model.inputShape[1], model.inputShape[2], model.normalizeMethod);
 
       final input = [matrix];
       final output = [List<num>.filled(model.outputShape[1], 0)];
@@ -102,22 +104,10 @@ class InferenceWorker {
           Interpreter.fromAddress(model.interpreterAddress);
       interpreter.run(input, output);
 
-
-      //TODO: Isolate this code for better testing
       // Get first output tensor (it contains all predictions)
       final result = output.first;
-
-      // num maxScore = result.reduce((num acc, num elem) => acc + elem); // For % score
-      // Set classification map {label: points}
-      var classification = <String, double>{};
-      // Transform every value to % and assign to corresponding label
-      for (var i = 0; i < result.length; i++) {
-        if (result[i] != 0) {
-          // Set label: points
-          classification[model.labels[i]] =
-              result[i].toDouble() /*/ maxScore.toDouble()*/;
-        }
-      }
+      final classification = PredictionUtils.mapScoreWithLabel(
+          result, model.labels, model.isBinary, model.binaryThreshold);
 
       sendPort.send((id, classification));
     });
