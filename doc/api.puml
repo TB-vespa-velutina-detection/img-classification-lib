@@ -1,0 +1,45 @@
+@startuml
+set namespaceSeparator ::
+
+class "lib::ImageClassificationHelper" {
+  +List<String> labels
+  -InterpreterOptions? _loadOptions(ImageClassificationOption options)
+  -_loadModel(String modelPath)
+  -_loadLabels(String labelsPath, String separator)
+  +initHelper(String modelPath, String labelsPath, String separator, ImageClassificationOption options)
+  +inferenceImage(String imgPath)
+}
+
+"lib::ImageClassificationHelper" --> "lib::ImageClassificationOption"
+"lib::ImageClassificationHelper" -right-> "1   " "tflite_flutter::Interpreter"
+"lib::ImageClassificationHelper" --> "2" "tflite_flutter::Tensor" : input/outputTensor
+
+class "tflite_flutter::Interpreter" {
+    -List<Tensor>? _inputTensor
+    -List<Tensor>? _outputTensor
+}
+
+"tflite_flutter::Interpreter" --> "tflite_flutter::Tensor"
+
+
+class "tflite_flutter::Tensor" {
+    -List<int> shape
+}
+
+class "lib::ImageClassificationOption" {
+  +int numThreads
+  +bool useGpu
+  +bool useXnnPack
+  +bool isBinary
+  +double binaryThreshold
+}
+
+"lib::ImageClassificationOption" --> "1  " "lib::NormalizeMethod"
+
+enum "lib::NormalizeMethod" {
+  {static} +NormalizeMethod none
+  {static} +NormalizeMethod zero_to_one
+  {static} +NormalizeMethod minus_one_to_one
+}
+
+@enduml

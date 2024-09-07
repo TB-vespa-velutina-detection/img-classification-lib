@@ -1,0 +1,91 @@
+@startuml
+set namespaceSeparator ::
+
+class "lib::ImageClassificationHelper" {
+  +List<String> labels
+  -ImageClassificationOption _options
+  -InterpreterOptions? _loadOptions(ImageClassificationOption options)
+  -_loadModel(String modelPath)
+  -_loadLabels(String labelsPath, String separator)
+  +initHelper(String modelPath, String labelsPath, String separator, ImageClassificationOption options)
+  +inferenceImage(String imgPath)
+}
+
+'"lib::ImageClassificationHelper" --> "lib::ImageClassificationOption"
+"lib::ImageClassificationHelper" -right-> "1   " "tflite_flutter::Interpreter"
+"lib::ImageClassificationHelper" -down-> "1 \n" "src::InferenceWorker"
+'"lib::ImageClassificationHelper" --> "2" "tflite_flutter::Tensor" : input/outputTensor
+
+class "tflite_flutter::Interpreter" {
+'    -List<Tensor>? _inputTensor
+'    -List<Tensor>? _outputTensor
+}
+
+'"tflite_flutter::Interpreter" --> "tflite_flutter::Tensor"
+
+
+'class "tflite_flutter::Tensor" {
+'    -List<int> shape
+'}
+'
+'class "lib::ImageClassificationOption" {
+'  +int numThreads
+'  +bool useGpu
+'  +bool useXnnPack
+'  +bool isBinary
+'  +double binaryThreshold
+'}
+'
+'"lib::ImageClassificationOption" --> "1  " "lib::NormalizeMethod"
+'
+'enum "lib::NormalizeMethod" {
+'  {static} +NormalizeMethod none
+'  {static} +NormalizeMethod zero_to_one
+'  {static} +NormalizeMethod minus_one_to_one
+'}
+
+class src::InferenceWorker {
+    -final SendPort _commands
+    -final ReceivePort _responses
+    -final Map<int, Completer<Object?>> _activeRequests
+    -int _idCounter
+    -bool _closed
+
+    -_handleResponsesFromIsolate(dynamic message)
+    {static} -_handleCommandsToIsolate(ReceivePort receivePort, SendPort sendPort)
+    {static} -_startRemoteIsolate(SendPort sendPort)
+    +Future<Map<String, double>?> inferenceImage(InferenceModel model) async
+    {static} +Future<InferenceWorker> spawn() async
+    +close()
+}
+
+class src::ImageUtils {
+    {static} +List<List<List<num>>> toResizedMatrix(Image image, int newWidth, int newHeight, NormalizeMethod normalizeMethod)
+    {static} -List<num> _normalizePixel(num r, num g, num b, NormalizeMethod option)
+}
+
+class src::PredictionUtils {
+    {static} +Map<String, double> mapScoreWithLabel(List<num> predictions, List<String> labels, bool isBinary, double threshold)
+    {static} -Map<String, double> _mapScoreWithLabel(List<num> predictions, List<String> labels)
+    {static} -Map<String, double> _mapScoreWithLabelBinary(List<num> predictions, List<String> labels, double threshold)
+}
+
+"src::InferenceWorker" -[hidden]-> "src::ImageUtils"
+"src::ImageUtils" -[hidden]-> "src::PredictionUtils"
+"src::PredictionUtils" -[hidden]-> src::InferenceModel
+
+class src::InferenceModel {
+    +int interpreterAddress
+    +List<String> labels
+    +List<int> inputShape
+    +List<int> outputShape
+    +NormalizeMethod normalizeMethod
+    +bool isBinary
+    +double binaryThreshold
+}
+
+"src::InferenceModel" -right-> "1   " "image::Image"
+
+class image::Image
+
+@enduml
