@@ -1,3 +1,5 @@
+import 'dart:math';
+
 class PredictionUtils {
   static Map<String, double> mapScoreWithLabel(List<num> predictions,
       List<String> labels, bool isBinary, double threshold) {
@@ -10,15 +12,12 @@ class PredictionUtils {
 
   static Map<String, double> _mapScoreWithLabel(
       List<num> predictions, List<String> labels) {
-    if (labels.isEmpty || predictions.length > labels.length) {
-      throw ArgumentError(
-          'Some predictions do not have corresponding labels. Make sure to have a label for every output.');
-    }
+    var maxIter = max(predictions.length, labels.length);
 
     // Set classification map {label: points}
     var classification = <String, double>{};
     // Transform every value to % and assign to corresponding label
-    for (var i = 0; i < predictions.length; i++) {
+    for (var i = 0; i < maxIter; i++) {
       classification[labels[i]] = predictions[i].toDouble();
     }
 
