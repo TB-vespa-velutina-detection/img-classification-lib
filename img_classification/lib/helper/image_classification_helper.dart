@@ -6,16 +6,17 @@ import 'package:image/image.dart';
 import 'package:img_classification/model/image_classification_option.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
-import '../src/model/inference_model.dart';
-import '../src/worker/inference_worker.dart';
+import '../src/utils/image_utils.dart';
+import '../src/utils/prediction_utils.dart';
 
 class ImageClassificationHelper {
-  late ImageClassificationOption _options;
-  late Interpreter interpreter;
-  late List<String> labels;
-  late InferenceWorker inferenceWorker;
-  late Tensor inputTensor;
-  late Tensor outputTensor;
+  ImageClassificationOption? _options;
+  String? _modelAssetPath;
+  Interpreter? _interpreter;
+  IsolateInterpreter? _isolateInterpreter;
+  List<String>? _labels;
+  Tensor? _inputTensor;
+  Tensor? _outputTensor;
 
   InterpreterOptions? _loadOptions(ImageClassificationOption options) {
     final interpreterOptions = InterpreterOptions();
@@ -40,27 +41,28 @@ class ImageClassificationHelper {
   }
 
   // Load model
-  Future<void> _loadModel(
-      String modelAssetPath, ImageClassificationOption options) async {
+  Future<void> _loadModel(ImageClassificationOption options) async {
     final interpreterOptions = _loadOptions(options);
 
     // Load model from assets
-    interpreter = await Interpreter.fromAsset(modelAssetPath,
+    _interpreter = await Interpreter.fromAsset(_modelAssetPath!,
         options: interpreterOptions);
-    // Get tensor input shape [1, 224, 224, 3]
-    inputTensor = interpreter.getInputTensors().first;
-    // Get tensor output shape [1, 1000]
-    outputTensor = interpreter.getOutputTensors().first;
+    _isolateInterpreter = await IsolateInterpreter.create(address: _interpreter!.address);
 
-    log('input shape $inputTensor');
-    log('ouput shape $outputTensor');
+    // Get tensor input shape [1, 224, 224, 3]
+    _inputTensor = _interpreter!.getInputTensors().first;
+    // Get tensor output shape [1, 1000]
+    _outputTensor = _interpreter!.getOutputTensors().first;
+
+    log('input shape $_inputTensor');
+    log('ouput shape $_outputTensor');
     log('Interpreter loaded successfully');
   }
 
   // Load labels from assets
   Future<void> _loadLabels(String labelsAssetPath, String separator) async {
     final labelTxt = await rootBundle.loadString(labelsAssetPath);
-    labels = labelTxt.split(separator);
+    _labels = labelTxt.split(separator);
   }
 
   Future<void> initHelper(
@@ -68,39 +70,60 @@ class ImageClassificationHelper {
       required String labelsAssetPath,
       String separator = '\n',
       ImageClassificationOption? options}) async {
-    //TODO: bug...
-    // if (inferenceWorker != null) {
-    //   inferenceWorker.close();
-    // }
+    _modelAssetPath = modelAssetPath;
     _options = options ?? ImageClassificationOption();
-    _loadModel(modelAssetPath, _options);
+    _loadModel(_options!);
     _loadLabels(labelsAssetPath, separator);
-    inferenceWorker = await InferenceWorker.spawn();
   }
 
   // inference still image
   Future<Map<String, double>?> inferenceImage(String imgPath) async {
-    // If no InfereceWorker, then the helper was never initialized
-    if (inferenceWorker == null) {
+    // If no Interpreter, then the helper was never initialized
+    if (_interpreter == null) {
       throw StateError(
-          'InfereceWorker not initialized. Try to call initHelper() on your ImageClassificationHelper');
+          'Interpreter not initialized. Try to call initHelper() on your ImageClassificationHelper');
     }
 
     // Read image bytes from file
-    final imageData = File(imgPath).readAsBytesSync();
+    final imageData = await File(imgPath).readAsBytes();
     final Image image = decodeImage(imageData)!;
 
-    // Init inferenceModel
-    var model = InferenceModel(
+    final matrix = ImageUtils.toResizedMatrix(
         image,
-        interpreter.address,
-        labels,
-        inputTensor.shape,
-        outputTensor.shape,
-        normalizeMethod: _options.normalizeMethod,
-        isBinary: _options.isBinary,
-        binaryThreshold: _options.binaryThreshold);
+        _inputTensor!.shape[1],
+        _inputTensor!.shape[2],
+        _options!.normalizeMethod
+    );
+    final input = [matrix];
+    final output = [List<num>.filled(_outputTensor!.shape[1], 0)];
 
-    return await inferenceWorker.inferenceImage(model);
+    // Run inference
+    await _isolateInterpreter!.run(input, output);
+
+    // Get first output tensor (it contains all predictions)
+    final result = output.first;
+    final classification = PredictionUtils.mapScoreWithLabel(
+        result,
+        _labels!,
+        _options!.isBinary,
+        _options!.binaryThreshold
+    );
+
+    return classification;
+  }
+
+  Future<void> changeOptions(ImageClassificationOption options) async {
+    //Closing previous interpreter
+    if (_isolateInterpreter != null) {
+      _isolateInterpreter!.close();
+    }
+    _options = options;
+    await _loadModel(options);
+  }
+
+  void close() {
+    if (_isolateInterpreter != null) {
+      _isolateInterpreter!.close();
+    }
   }
 }

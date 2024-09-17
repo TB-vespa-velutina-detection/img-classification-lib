@@ -3,6 +3,9 @@ import 'dart:math';
 class PredictionUtils {
   static Map<String, double> mapScoreWithLabel(List<num> predictions,
       List<String> labels, bool isBinary, double threshold) {
+    if (predictions.isEmpty) {
+      return {};
+    }
     if (isBinary) {
       return _mapScoreWithLabelBinary(predictions, labels, threshold);
     } else {
