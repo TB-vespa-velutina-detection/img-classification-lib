@@ -47,7 +47,8 @@ class ImageClassificationHelper {
     // Load model from assets
     _interpreter = await Interpreter.fromAsset(_modelAssetPath!,
         options: interpreterOptions);
-    _isolateInterpreter = await IsolateInterpreter.create(address: _interpreter!.address);
+    _isolateInterpreter =
+        await IsolateInterpreter.create(address: _interpreter!.address);
 
     // Get tensor input shape [1, 224, 224, 3]
     _inputTensor = _interpreter!.getInputTensors().first;
@@ -88,26 +89,23 @@ class ImageClassificationHelper {
     final imageData = await File(imgPath).readAsBytes();
     final Image image = decodeImage(imageData)!;
 
-    final matrix = ImageUtils.toResizedMatrix(
-        image,
-        _inputTensor!.shape[1],
-        _inputTensor!.shape[2],
-        _options!.normalizeMethod
-    );
+    final matrix = ImageUtils.toResizedMatrix(image, _inputTensor!.shape[1],
+        _inputTensor!.shape[2], _options!.normalizeMethod);
     final input = [matrix];
     final output = [List<num>.filled(_outputTensor!.shape[1], 0)];
 
     // Run inference
-    await _isolateInterpreter!.run(input, output);
+    if (_options!.useGpu) {
+      //TFLite Flutter does not allow GPU inference outside the caller thread
+      _interpreter!.run(input, output);
+    } else {
+      await _isolateInterpreter!.run(input, output);
+    }
 
     // Get first output tensor (it contains all predictions)
     final result = output.first;
     final classification = PredictionUtils.mapScoreWithLabel(
-        result,
-        _labels!,
-        _options!.isBinary,
-        _options!.binaryThreshold
-    );
+        result, _labels!, _options!.isBinary, _options!.binaryThreshold);
 
     return classification;
   }
